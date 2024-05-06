@@ -16,6 +16,7 @@ using System.Reactive.Linq;
 using System.IO;
 using System.Text.Json;
 using BatmanVengeance.Frontend.Models;
+using System.Text.RegularExpressions;
 
 namespace BatmanVengeance.Frontend.ViewModels;
 
@@ -25,7 +26,14 @@ enum PageFunction
     next,
     previous
 }
+
+enum ProjectOptions
+{
+    save,
+    export
+}
 #endregion
+
 
 public class MainWindowViewModel : ViewModelBase
 {
@@ -34,7 +42,9 @@ public class MainWindowViewModel : ViewModelBase
     #endregion
 
     #region  Props
-    public string? SavePath { get; set; }
+    public string? ProjectSavePath { get; set; }
+
+    public string? ExportSavePath { get; set; }
 
     private ObservableCollection<ItemController>? _itemsController;
 
@@ -56,6 +66,8 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand? ChangePage { get; }
 
     public ICommand? SaveProject { get; }
+
+    public ICommand? ExportProject { get; }
 
     private string? _fileSelected;
     public string? FileSelected
@@ -85,36 +97,84 @@ public class MainWindowViewModel : ViewModelBase
 
         SaveProject = ReactiveCommand.Create(async () =>
         {
-            if (string.IsNullOrEmpty(SavePath))
-                await ChooseSavePath();
+            if (string.IsNullOrEmpty(ProjectSavePath))
+                await ChooseSavePath(ProjectOptions.save);
             SaveFile();
+        });
+
+        ExportProject = ReactiveCommand.Create(async () =>
+        {
+            await ChooseSavePath(ProjectOptions.export);
+            ExportFile();
         });
     }
 
 
+
     #endregion
+    private void ExportFile()
+    {
+        if (string.IsNullOrEmpty(ExportSavePath) || string.IsNullOrEmpty(FileSelectedFullPath))
+            return;
+
+        var textPatched = Project?.ItemsControllerViewModel?.FindAll(x => x.LenTranslated > 0);
+
+        if (textPatched == null || textPatched.Count == 0)
+            return;
+
+        var patchLabels = textPatched.Select(x => new PatchLabel
+        {
+            db = x.TextTranslated,
+            label = Regex.Replace(Guid.NewGuid().ToString().Replace("-", "_"), @"\d", ""),
+            originText = x.AddressTranslated
+        }).ToList();
+
+        new HexPatcher(new Patch
+        {
+            endian = "lsb",
+            output = FileSelected + ".patch",
+            dbPointer = "$08",
+            dwText = "2e",
+            insert = FileSelected,
+            origin = "$0000000",
+            PathLabels = patchLabels
+        }, ExportSavePath).Run();
+
+        if (!File.Exists(ExportSavePath.Substring(0, ExportSavePath.LastIndexOf("/") + 1) + FileSelected))
+            File.Copy(FileSelectedFullPath, ExportSavePath.Substring(0, ExportSavePath.LastIndexOf("/") + 1) + FileSelected);
+    }
 
     #region Meths
     private void SaveFile()
     {
-        if (string.IsNullOrEmpty(SavePath))
+        if (string.IsNullOrEmpty(ProjectSavePath))
             return;
-        File.WriteAllTextAsync(SavePath, JsonSerializer.Serialize(Project));
+        File.WriteAllTextAsync(ProjectSavePath, JsonSerializer.Serialize(Project));
     }
 
-    private async Task ChooseSavePath()
+    private async Task ChooseSavePath(ProjectOptions projectOptions)
     {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
             desktop.MainWindow?.StorageProvider is not { } provider)
             throw new NullReferenceException("Missing StorageProvider instance.");
-        var files = await provider.SaveFilePickerAsync(new FilePickerSaveOptions
-        {
-            Title = "Save project",
-            SuggestedFileName = "BatmanVengeance.json"
-        }
-
-       );
-        SavePath = files?.Path.AbsolutePath ?? "";
+        FilePickerSaveOptions filePickerSaveOptions;
+        if (projectOptions == ProjectOptions.save)
+            filePickerSaveOptions = new FilePickerSaveOptions
+            {
+                Title = "Save project",
+                SuggestedFileName = "BatmanVengeance.json"
+            };
+        else
+            filePickerSaveOptions = new FilePickerSaveOptions
+            {
+                Title = "export project",
+                SuggestedFileName = "BatmanVengeance.asm"
+            };
+        var files = await provider.SaveFilePickerAsync(filePickerSaveOptions);
+        if (projectOptions == ProjectOptions.save)
+            ProjectSavePath = files?.Path.AbsolutePath ?? "";
+        else
+            ExportSavePath = files?.Path.AbsolutePath ?? "";
     }
 
     private void ReadFile()
@@ -191,9 +251,7 @@ public class MainWindowViewModel : ViewModelBase
                 "8f",
                 "99",
                 "9d",
-                "8d",
-                "0d"
-
+                "8d"
              ], positionDelimiters: [
                 new PositionDelimiter{
                     InitialPosition = Convert.ToInt64("6CAE0", 16),
@@ -248,7 +306,7 @@ public class MainWindowViewModel : ViewModelBase
     private Project? ReadProjectFile()
     {
         var project = JsonSerializer.Deserialize<Project>(File.ReadAllText(FileSelectedFullPath ?? ""));
-        SavePath = FileSelectedFullPath;
+        ProjectSavePath = FileSelectedFullPath;
         return project;
     }
 

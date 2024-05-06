@@ -41,6 +41,10 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
                         DockPanel.Dock="Top">
+                <Button Content="_Export"
+                        FontSize="16"
+                        Margin="0,0,8,16"
+                        Command="{Binding ExportProject}" />
                 <Button Content="_Save"
                         FontSize="16"
                         Margin="0,0,8,16"
