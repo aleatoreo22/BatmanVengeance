@@ -11,12 +11,14 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="Batman Vengeance Translator"
-        CanResize="False"
-        Height="800"
+        Height="600"
         Width="800">
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
+    <Window.KeyBindings>
+        <KeyBinding Command="{Binding SaveProject}" Gesture="Ctrl+S" />
+    </Window.KeyBindings>
     <DockPanel Margin="8">
         <StackPanel HorizontalAlignment="Center"
                     DockPanel.Dock="Top"
@@ -39,6 +41,10 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
                         DockPanel.Dock="Top">
+                <Button Content="_Save"
+                        FontSize="16"
+                        Margin="0,0,8,16"
+                        Command="{Binding SaveProject}" />
                 <Button Content="_Open"
                         FontSize="16"
                         Margin="0,0,0,16"
@@ -48,6 +54,21 @@
                     BorderThickness="1"
                     CornerRadius="4">
                 <DockPanel Margin="16">
+                    <Grid DockPanel.Dock="Top">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Label Content="Text"
+                               Grid.Column="0" />
+                        <StackPanel Orientation="Horizontal"
+                                    Grid.Column="1">
+                            <Label Content="Address"
+                                   Width="100" />
+                            <Label Content="Len"
+                                   Width="36" />
+                        </StackPanel>
+                    </Grid>
                     <StackPanel HorizontalAlignment="Right"
                                 DockPanel.Dock="Bottom"
                                 Orientation="Horizontal">
@@ -59,9 +80,9 @@
                                 CommandParameter="{x:Static local:PageFunction.previous}"
                                 Margin="0,0,8,0" />
                         <NumericUpDown Text="{Binding Page}"
-                                 Margin="0,0,8,0" 
-                                 KeyUp="NumericUpDown_KeyUp"
-                                 ShowButtonSpinner="False"/>
+                                       Margin="0,0,8,0"
+                                       KeyUp="NumericUpDown_KeyUp"
+                                       ShowButtonSpinner="False" />
                         <Button Content="☞"
                                 FontWeight="Bold"
                                 FontSize="20"
@@ -69,7 +90,10 @@
                                 Command="{Binding ChangePage}"
                                 CommandParameter="{x:Static local:PageFunction.next}" />
                     </StackPanel>
-                    <ItemsControl ItemsSource="{Binding ItemsController}" />
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding ItemsController}"
+                                      ScrollViewer.VerticalScrollBarVisibility="Visible" />
+                    </ScrollViewer>
                 </DockPanel>
             </Border>
         </DockPanel>

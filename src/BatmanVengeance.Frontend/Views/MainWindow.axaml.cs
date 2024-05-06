@@ -16,8 +16,8 @@ public partial class MainWindow : Window
         if (e.Key != Key.Return && e.Key != Key.Enter)
             return;
         var textBox = (NumericUpDown)sender;
-        ((MainWindowViewModel)DataContext).ShowItensController(int.Parse(textBox.Text));
-        textBox.Text = ((MainWindowViewModel)DataContext).Page.ToString();
+        ((MainWindowViewModel?)DataContext)?.ShowItensController(int.Parse(textBox.Text ?? "0"));
+        textBox.Text = ((MainWindowViewModel?)DataContext)?.Page.ToString();
     }
 
 }

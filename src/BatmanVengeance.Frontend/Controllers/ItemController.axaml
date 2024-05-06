@@ -11,33 +11,50 @@
     <Design.DataContext>
         <vm:ItemControllerViewModel />
     </Design.DataContext>
-    <Grid IsVisible="{Binding Visible}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
-        <StackPanel Margin="0,0,8,0"
-                    Grid.Column="0">
-            <Label Content="Text"
-                   Margin="0,0,0,4" />
-            <TextBox Text="{Binding Text}" />
-        </StackPanel>
-        <StackPanel Grid.Column="1" 
-                    Orientation="Horizontal">
-            <StackPanel Margin="0,0,8,0">
-                <Label Content="Address"
-                       Margin="0,0,0,4" />
+    <Border BorderThickness="0,0,0,2"
+            BorderBrush="Gray">
+        <Grid IsVisible="{Binding Visible}"
+              Margin="0,8,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBox Text="{Binding Text}"
+                     Margin="0,0,8,8"
+                     Grid.Column="0"
+                     Grid.Row="0" 
+                     IsReadOnly="True"/>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Grid.Row="0"
+                        Margin="0,0,0,8">
                 <TextBox Width="100"
                          IsReadOnly="True"
-                         Text="{Binding AddressString}" />
-            </StackPanel>
-            <StackPanel>
-                <Label Content="Max Len"
-                       Margin="0,0,0,4" />
+                         Text="{Binding Address}"
+                         Margin="0,0,8,0" />
                 <TextBox Width="32"
                          IsReadOnly="True"
                          Text="{Binding Len}" />
             </StackPanel>
-        </StackPanel>
-    </Grid>
+            <TextBox Grid.Column="0"
+                     Grid.Row="1"
+                     Margin="0,0,8,0"
+                     Text="{Binding TextTranslated}" />
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Grid.Row="1">
+                <TextBox Width="100"
+                         IsReadOnly="True"
+                         Text="{Binding AddressTranslated}"
+                         Margin="0,0,8,0" />
+                <TextBox Width="32"
+                         IsReadOnly="True"
+                         Text="{Binding LenTranslated}" />
+            </StackPanel>
+        </Grid>
+    </Border>
 </UserControl>

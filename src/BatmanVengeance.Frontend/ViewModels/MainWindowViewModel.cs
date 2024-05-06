@@ -13,7 +13,9 @@ using System.ComponentModel;
 using BatmanVengeance.Model;
 using System.Collections.ObjectModel;
 using System.Reactive.Linq;
-using Avalonia.Controls;
+using System.IO;
+using System.Text.Json;
+using BatmanVengeance.Frontend.Models;
 
 namespace BatmanVengeance.Frontend.ViewModels;
 
@@ -28,13 +30,11 @@ enum PageFunction
 public class MainWindowViewModel : ViewModelBase
 {
     #region Const
-    private const int ITEMS_PER_PAGE = 5;
+    private const int ITEMS_PER_PAGE = 8;
     #endregion
 
     #region  Props
-    public int TotalPages { get; set; }
-
-    public List<ItemControllerViewModel>? ItemsControllerViewModel { get; set; }
+    public string? SavePath { get; set; }
 
     private ObservableCollection<ItemController>? _itemsController;
 
@@ -55,6 +55,8 @@ public class MainWindowViewModel : ViewModelBase
 
     public ICommand? ChangePage { get; }
 
+    public ICommand? SaveProject { get; }
+
     private string? _fileSelected;
     public string? FileSelected
     {
@@ -64,7 +66,7 @@ public class MainWindowViewModel : ViewModelBase
 
     public string? FileSelectedFullPath { get; set; }
 
-    public List<HexInfo>? HexInfos { get; set; }
+    public Project? Project { get; set; }
     #endregion
 
     #region  Ctor
@@ -80,19 +82,51 @@ public class MainWindowViewModel : ViewModelBase
         {
             ShowItensController(Page + ((pageFunction == PageFunction.next) ? 1 : -1));
         });
+
+        SaveProject = ReactiveCommand.Create(async () =>
+        {
+            if (string.IsNullOrEmpty(SavePath))
+                await ChooseSavePath();
+            SaveFile();
+        });
     }
+
+
     #endregion
 
     #region Meths
+    private void SaveFile()
+    {
+        if (string.IsNullOrEmpty(SavePath))
+            return;
+        File.WriteAllTextAsync(SavePath, JsonSerializer.Serialize(Project));
+    }
+
+    private async Task ChooseSavePath()
+    {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
+            desktop.MainWindow?.StorageProvider is not { } provider)
+            throw new NullReferenceException("Missing StorageProvider instance.");
+        var files = await provider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save project",
+            SuggestedFileName = "BatmanVengeance.json"
+        }
+
+       );
+        SavePath = files?.Path.AbsolutePath ?? "";
+    }
+
     private void ReadFile()
     {
         var worker = new BackgroundWorker();
         worker.DoWork += (x, y) =>
         {
-            y.Result = new HexReader(FileSelectedFullPath ?? "", 3,
+            y.Result = FileSelected?.Substring(FileSelected.LastIndexOf(".") + 1) == "json" ?
+             ReadProjectFile() :
+             new HexReader(FileSelectedFullPath ?? "", 3,
              blackList:
              [
-                "2e",
                 "23",
                 "00",
                 "e4",
@@ -157,8 +191,18 @@ public class MainWindowViewModel : ViewModelBase
                 "8f",
                 "99",
                 "9d",
-                "8d"
+                "8d",
+                "0d"
 
+             ], positionDelimiters: [
+                new PositionDelimiter{
+                    InitialPosition = Convert.ToInt64("6CAE0", 16),
+                    EndPosition = Convert.ToInt64("6E7AF", 16),
+                },
+                new PositionDelimiter {
+                    InitialPosition = Convert.ToInt64("69933", 16),
+                    EndPosition = Convert.ToInt64("69E25", 16),
+                }
              ]).Read();
         };
         worker.RunWorkerCompleted += (x, y) =>
@@ -168,19 +212,44 @@ public class MainWindowViewModel : ViewModelBase
                 Console.WriteLine(y.Error.Message);
                 return;
             }
-            ItemsControllerViewModel = ((List<HexInfo>?)y.Result ?? [])
-            .Select(a => new ItemControllerViewModel
+            if (y.Result == null)
+                return;
+            if (typeof(List<HexInfo>) == y?.Result?.GetType())
             {
-                AddressString = a.Position,
-                Len = a.ValueString.Length.ToString(),
-                Text = a.ValueString,
-                AddressInt = int.Parse(a.Position, System.Globalization.NumberStyles.HexNumber),
-                Visible = true
-            }).ToList();
-            TotalPages = (int)Math.Ceiling((double)ItemsControllerViewModel.Count / ITEMS_PER_PAGE);
+                var itemsControllerViewModel = ((List<HexInfo>?)y.Result ?? []).OrderByDescending(x => Convert.ToInt64(x.Position, 16))
+                .Select(a => new ItemControllerViewModel
+                {
+                    Address = a.Position,
+                    Len = a.Len,
+                    Text = a.ValueString,
+                    Visible = true
+                }).ToList();
+
+                Project = new Project
+                {
+                    FileSelected = FileSelected,
+                    FileSelectedFullPath = FileSelectedFullPath,
+                    ItemsControllerViewModel = itemsControllerViewModel,
+                    TotalPages = (int)Math.Ceiling((double)itemsControllerViewModel.Count / ITEMS_PER_PAGE)
+                };
+
+            }
+            else
+            {
+                Project = (Project?)y?.Result;
+                FileSelected = Project?.FileSelected;
+                FileSelectedFullPath = Project?.FileSelectedFullPath;
+            }
             ShowItensController(1);
         };
         worker.RunWorkerAsync();
+    }
+
+    private Project? ReadProjectFile()
+    {
+        var project = JsonSerializer.Deserialize<Project>(File.ReadAllText(FileSelectedFullPath ?? ""));
+        SavePath = FileSelectedFullPath;
+        return project;
     }
 
     private async Task OpenFile()
@@ -188,18 +257,22 @@ public class MainWindowViewModel : ViewModelBase
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop ||
         desktop.MainWindow?.StorageProvider is not { } provider)
             throw new NullReferenceException("Missing StorageProvider instance.");
-
         var files = await provider.OpenFilePickerAsync(new FilePickerOpenOptions()
         {
-            Title = "Open Rom File",
+            Title = "Open rom file or a project",
             AllowMultiple = false,
             FileTypeFilter =
             [
                 new("GBA File")
                 {
                     Patterns = [ "*.gba" ]
+                },
+                  new("Project")
+                {
+                    Patterns = ["*.json"]
                 }
-            ]
+            ],
+
         });
         FileSelected = files.FirstOrDefault()?.Name ?? "";
         FileSelectedFullPath = files.FirstOrDefault()?.Path.LocalPath ?? "";
@@ -209,20 +282,20 @@ public class MainWindowViewModel : ViewModelBase
     {
         if (page < 1)
             page = 1;
-        if (page > TotalPages)
-            page = TotalPages;
+        if (page > Project?.TotalPages)
+            page = Project.TotalPages;
 
-        if (TotalPages > 0 && page > 0)
+        if (Project?.TotalPages > 0 && page > 0)
         {
             var index = (page - 1) * ITEMS_PER_PAGE;
             List<ItemController> itemsController = [];
             for (int i = index; i < index + ITEMS_PER_PAGE; i++)
             {
-                if (i + 1 > ItemsControllerViewModel?.Count)
+                if (i + 1 > Project.ItemsControllerViewModel?.Count)
                     continue;
                 itemsController.Add(new ItemController
                 {
-                    DataContext = ItemsControllerViewModel?[i],
+                    DataContext = Project.ItemsControllerViewModel?[i],
                 });
             }
             ItemsController = new ObservableCollection<ItemController>(itemsController);
