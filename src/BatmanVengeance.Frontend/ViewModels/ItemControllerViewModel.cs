@@ -11,7 +11,7 @@ public class ItemControllerViewModel : ViewModelBase
         set { this.RaiseAndSetIfChanged(ref _text, value); }
     }
 
-    private bool _visible;
+    private bool _visible = true;
     public bool Visible
     {
         get { return _visible; }

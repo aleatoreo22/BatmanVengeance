@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using BatmanVengeance.Frontend.ViewModels;
 
 namespace BatmanVengeance.Frontend.Views;
@@ -10,13 +11,13 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
-    private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    private void NumericUpDown_KeyUp(object sender, KeyEventArgs e)
     {
-        var viewModel = (MainWindowViewModel)DataContext;
-        if (viewModel != null)
-        {
-            var scrollViewer = sender as ScrollViewer;
-            viewModel.OnScrollChanged(ref  scrollViewer, scrollViewer?.Offset.Y, scrollViewer.Extent.Height - scrollViewer.Bounds.Height);
-        }
+        if (e.Key != Key.Return && e.Key != Key.Enter)
+            return;
+        var textBox = (NumericUpDown)sender;
+        ((MainWindowViewModel)DataContext).ShowItensController(int.Parse(textBox.Text));
+        textBox.Text = ((MainWindowViewModel)DataContext).Page.ToString();
     }
+
 }

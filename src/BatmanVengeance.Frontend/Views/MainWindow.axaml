@@ -1,57 +1,77 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:BatmanVengeance.Frontend.ViewModels"
+        xmlns:local="clr-namespace:BatmanVengeance.Frontend.ViewModels;assembly=BatmanVengeance.Frontend"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="750"
+        mc:Ignorable="d"
+        d:DesignWidth="800"
+        d:DesignHeight="750"
         x:Class="BatmanVengeance.Frontend.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="Batman Vengeance Translator"
         CanResize="False"
-        Height="800" Width="800">
+        Height="800"
+        Width="800">
     <Design.DataContext>
-        <vm:MainWindowViewModel/>
+        <vm:MainWindowViewModel />
     </Design.DataContext>
     <DockPanel Margin="8">
         <StackPanel HorizontalAlignment="Center"
                     DockPanel.Dock="Top"
                     Margin="0,0,0,16">
             <Label Content="Batman Vengeance"
-                    FontSize="24"/>
+                   FontSize="24" />
         </StackPanel>
-
         <StackPanel DockPanel.Dock="Bottom">
-                        <DockPanel>
-                            <Panel DockPanel.Dock="Top">
-                                <Label Content="Log"/>
-                                <Label Content="{Binding FileSelected}"
-                                        HorizontalContentAlignment="Right"/>
-                            </Panel>
-                            <TextBox Height="120"
-                                    IsReadOnly="True"
-                                    Text="{Binding Log}"/>
-                        </DockPanel>
+            <DockPanel>
+                <Panel DockPanel.Dock="Top">
+                    <Label Content="{Binding FileSelected}"
+                           HorizontalContentAlignment="Right" />
+                </Panel>
+            </DockPanel>
             <Label Content="@copyright Bibizoide"
-                    HorizontalAlignment="Right"/>
+                   HorizontalAlignment="Right" />
         </StackPanel>
-
         <DockPanel>
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
                         DockPanel.Dock="Top">
-                <Button Content="Open"
+                <Button Content="_Open"
                         FontSize="16"
                         Margin="0,0,0,16"
-                        Command="{Binding SelectFile}"/>
-            </StackPanel >
-            <Panel Margin="0,0,0,16">
-                <ScrollViewer ScrollChanged="ScrollViewer_ScrollChanged">
-                    <ItemsControl ItemsSource="{Binding ItensController}"
-                                ScrollViewer.VerticalScrollBarVisibility="Visible"/>
-                </ScrollViewer>
-            </Panel>
+                        Command="{Binding SelectFile}" />
+            </StackPanel>
+            <Border BorderBrush="Gray"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <DockPanel Margin="16">
+                    <StackPanel HorizontalAlignment="Right"
+                                DockPanel.Dock="Bottom"
+                                Orientation="Horizontal">
+                        <Button Content="☜"
+                                FontWeight="Bold"
+                                FontSize="20"
+                                Height="30"
+                                Command="{Binding ChangePage}"
+                                CommandParameter="{x:Static local:PageFunction.previous}"
+                                Margin="0,0,8,0" />
+                        <NumericUpDown Text="{Binding Page}"
+                                 Margin="0,0,8,0" 
+                                 KeyUp="NumericUpDown_KeyUp"
+                                 ShowButtonSpinner="False"/>
+                        <Button Content="☞"
+                                FontWeight="Bold"
+                                FontSize="20"
+                                Height="30"
+                                Command="{Binding ChangePage}"
+                                CommandParameter="{x:Static local:PageFunction.next}" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding ItemsController}" />
+                </DockPanel>
+            </Border>
         </DockPanel>
     </DockPanel>
 </Window>

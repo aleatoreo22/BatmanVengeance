@@ -1,8 +1,6 @@
 ﻿using BatmanVengeance.Frontend.Contollers;
 using ReactiveUI;
 using System;
-using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -16,21 +14,46 @@ using BatmanVengeance.Model;
 using System.Collections.ObjectModel;
 using System.Reactive.Linq;
 using Avalonia.Controls;
-using DynamicData.Kernel;
 
 namespace BatmanVengeance.Frontend.ViewModels;
 
+#region  Enum
+enum PageFunction
+{
+    next,
+    previous
+}
+#endregion
+
 public class MainWindowViewModel : ViewModelBase
 {
-    public List<ItemControllerViewModel>? ItensControllerViewModel { get; set; }
-    private ObservableCollection<ItemController>? _itensController;
-    public ObservableCollection<ItemController>? ItensController
+    #region Const
+    private const int ITEMS_PER_PAGE = 5;
+    #endregion
+
+    #region  Props
+    public int TotalPages { get; set; }
+
+    public List<ItemControllerViewModel>? ItemsControllerViewModel { get; set; }
+
+    private ObservableCollection<ItemController>? _itemsController;
+
+    public ObservableCollection<ItemController>? ItemsController
     {
-        get { return _itensController; }
-        set { this.RaiseAndSetIfChanged(ref _itensController, value); }
+        get { return _itemsController; }
+        set { this.RaiseAndSetIfChanged(ref _itemsController, value); }
+    }
+
+    private int _page;
+    public int Page
+    {
+        get { return _page; }
+        set { this.RaiseAndSetIfChanged(ref _page, value); }
     }
 
     public ICommand? SelectFile { get; }
+
+    public ICommand? ChangePage { get; }
 
     private string? _fileSelected;
     public string? FileSelected
@@ -39,17 +62,12 @@ public class MainWindowViewModel : ViewModelBase
         set { this.RaiseAndSetIfChanged(ref _fileSelected, value); }
     }
 
-    private string? _log;
-    public string? Log
-    {
-        get { return _log; }
-        set { this.RaiseAndSetIfChanged(ref _log, value); }
-    }
-
     public string? FileSelectedFullPath { get; set; }
 
     public List<HexInfo>? HexInfos { get; set; }
+    #endregion
 
+    #region  Ctor
     public MainWindowViewModel()
     {
         SelectFile = ReactiveCommand.Create(async () =>
@@ -57,47 +75,110 @@ public class MainWindowViewModel : ViewModelBase
             await OpenFile();
             ReadFile();
         });
-    }
 
+        ChangePage = ReactiveCommand.Create((PageFunction pageFunction) =>
+        {
+            ShowItensController(Page + ((pageFunction == PageFunction.next) ? 1 : -1));
+        });
+    }
+    #endregion
+
+    #region Meths
     private void ReadFile()
     {
         var worker = new BackgroundWorker();
         worker.DoWork += (x, y) =>
         {
-            y.Result = new HexReader(FileSelectedFullPath ?? "", blackList:
-            [
+            y.Result = new HexReader(FileSelectedFullPath ?? "", 0,
+             blackList:
+             [
                 "2e",
+                "23",
                 "00",
                 "e4",
-                "ff"
-            ]).Read();
+                "ff",
+                "9a",
+                "84",
+                "82",
+                "11",
+                "8b",
+                "98",
+                "81",
+                "7f",
+                "19",
+                "93",
+                "10",
+                "85",
+                "94",
+                "8a",
+                "13",
+                "9f",
+                "97",
+                "03",
+                "1d",
+                "04",
+                "0e",
+                "95",
+                "80",
+                "01",
+                "90",
+                "88",
+                "87",
+                "07",
+                "96",
+                "12",
+                "1f",
+                "18",
+                "1c",
+                "0f",
+                "05",
+                "08",
+                "86",
+                "02",
+                "9e",
+                "14",
+                "0c",
+                "83",
+                "1e",
+                "17",
+                "1b",
+                "16",
+                "15",
+                "0b",
+                "06",
+                "1a",
+                "8c",
+                "92",
+                "8e",
+                "89",
+                "91",
+                "9b",
+                "9c",
+                "8f",
+                "99",
+                "9d",
+                "8d"
+
+             ]).Read();
         };
         worker.RunWorkerCompleted += (x, y) =>
         {
             if (y.Error != null)
             {
-                Log += y.Error.Message;
+                Console.WriteLine(y.Error.Message);
                 return;
             }
-            ItensControllerViewModel = ((List<HexInfo>?)y.Result ?? [])
+            ItemsControllerViewModel = ((List<HexInfo>?)y.Result ?? [])
             .Select(a => new ItemControllerViewModel
             {
                 AddressString = a.Position,
                 Len = a.ValueString.Length.ToString(),
                 Text = a.ValueString,
                 AddressInt = int.Parse(a.Position, System.Globalization.NumberStyles.HexNumber),
-                Visible = false
+                Visible = true
             }).ToList();
-
-            ItensController = new ObservableCollection<ItemController>(
-                ItensControllerViewModel.GetRange(0, 500).Select(
-                    a => new ItemController
-                    {
-                        DataContext = a
-                    }
-                ).ToList()
-            );
-            ShowItensController();
+            TotalPages = (int)Math.Ceiling((double)ItemsControllerViewModel.Count / ITEMS_PER_PAGE);
+            ShowItensController(1);
         };
         worker.RunWorkerAsync();
     }
@@ -124,49 +205,29 @@ public class MainWindowViewModel : ViewModelBase
         FileSelectedFullPath = files.FirstOrDefault()?.Path.LocalPath ?? "";
     }
 
-    internal void ShowItensController()
+    public void ShowItensController(int page)
     {
-        int index;
-        var lastItem = ItensController?.LastOrDefault
-        (
-            x => ((ItemControllerViewModel?)x.DataContext)?.Visible ?? false
-        );
-        if (lastItem != null)
-            index = ItensController?.IndexOf(lastItem) + 1 ?? 0;
-        else
-            index = 0;
+        if (page < 1)
+            page = 1;
+        if (page > TotalPages)
+            page = TotalPages;
 
-
-
-        for (int i = index; i < index + 200; i++)
+        if (TotalPages > 0 && page > 0)
         {
-            if ((ItensController?[i].DataContext) != null)
-                ((ItemControllerViewModel)ItensController[i].DataContext).Visible = true;
-        }
-
-        if (index < 500)
-            return;
-        for (int i = 0; i < index - 500; i++)
-        {
-            if ((ItensController?[i].DataContext) != null)
-                ((ItemControllerViewModel)ItensController[i].DataContext).Visible = false;
-        }
-    }
-
-    internal void OnScrollChanged(ref ScrollViewer scrollViewer, double? y, double height)
-    {
-        if (y == 0 || y == null)
-            return;
-        if (height - y <= 10)
-        {
-
-            if (ItensController?.ToList()
-                    .FindAll(x => ((ItemControllerViewModel?)x?.DataContext)?.Visible ?? false)
-                    .Count >= 500)
+            var index = (page - 1) * ITEMS_PER_PAGE;
+            List<ItemController> itemsController = [];
+            for (int i = index; i < index + ITEMS_PER_PAGE; i++)
             {
-                ShowItensController();
-                scrollViewer.Offset = new Vector(scrollViewer.Offset.X, (double)y - 3900);
+                if (i + 1 > ItemsControllerViewModel?.Count)
+                    continue;
+                itemsController.Add(new ItemController
+                {
+                    DataContext = ItemsControllerViewModel?[i],
+                });
             }
+            ItemsController = new ObservableCollection<ItemController>(itemsController);
+            Page = page;
         }
     }
+    #endregion
 }
