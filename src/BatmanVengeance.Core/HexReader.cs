@@ -36,7 +36,7 @@ public class HexReader
             if ((!WhiteList?.Contains(hexStringValue.ToLower()) ?? false) ||
                 (BlackList?.Contains(hexStringValue.ToLower()) ?? false))
             {
-                if (founded == "" || founded.Length <= MinLenString)
+                if (founded == "" || founded.Replace(" ", "").Replace("\n", "").Length <= MinLenString)
                     continue;
                 hexListMatch.Add(new HexInfo
                 {
@@ -66,10 +66,10 @@ public class HexReader
             }
         }
         File.WriteAllText("text.txt", string.Join("\n", hexExportInformation.Select(x => x.ValueHex + ": " + x.ValueString)));
-        List<string> englishDoc = [];
+        Dictionary<string, string> englishDic = [];
         try
         {
-            englishDoc = GetEnglishDoc();
+            englishDic = GetEnglishDoc();
         }
         catch (Exception)
         {
@@ -84,34 +84,29 @@ public class HexReader
 
         }
         List<HexInfo> hexReturn = [];
-        int cont = 0;
-        Console.WriteLine("Total de pacotes: " + packages.Count);
         Parallel.ForEach(packages, package =>
         {
-            cont++;
-            Console.WriteLine("Pacote Iniciado: " + cont);
-            hexReturn.AddRange(TryWords(package, englishDoc));
-            Console.WriteLine("Pacote Finalizado: " + cont);
+            hexReturn.AddRange(TryWords(package, englishDic));
         });
         return hexReturn;
     }
 
-    private List<HexInfo> TryWords(List<HexInfo> hexList, List<string> englishDic)
+    private List<HexInfo> TryWords(List<HexInfo> hexList, Dictionary<string, string> englishDic)
     {
-
         List<HexInfo> hexListReturn = [];
         foreach (var item in hexList)
         {
             try
             {
-                var words = item.ValueString.Split(" ").ToList();
+                var words = item.ValueString.ToLower().Split(" ").ToList();
                 words.RemoveAll(x => x == "" || x == " " || x == "\n");
                 if (words.Count == 0)
                     continue;
-                if (!englishDic.Contains(words[0]))
+                if (!englishDic.ContainsKey(words[0]))
                     continue;
-                if (words.Count > 1 && !englishDic.Contains(words[1]))
+                if (words.Count > 1 && !englishDic.ContainsKey(words[1]))
                     continue;
+                Console.WriteLine(item.ValueString);
                 hexListReturn.Add(item);
             }
             catch (Exception) { }
@@ -119,7 +114,7 @@ public class HexReader
         return hexListReturn;
     }
 
-    private List<string> GetEnglishDoc()
+    private Dictionary<string, string> GetEnglishDoc()
     {
         using (HttpClient client = new HttpClient())
         {
@@ -128,7 +123,7 @@ public class HexReader
                 HttpResponseMessage response = client.GetAsync("https://raw.githubusercontent.com/dwyl/english-words/master/words.txt").Result;
                 response.EnsureSuccessStatusCode();
                 string conteudo = response.Content.ReadAsStringAsync().Result;
-                return conteudo.Split("\n").ToList();
+                return conteudo.ToLower().Split("\n").ToList().Distinct().ToDictionary(x => x, x => x);
             }
             catch (HttpRequestException e)
             {

@@ -89,7 +89,7 @@ public class MainWindowViewModel : ViewModelBase
         var worker = new BackgroundWorker();
         worker.DoWork += (x, y) =>
         {
-            y.Result = new HexReader(FileSelectedFullPath ?? "", 0,
+            y.Result = new HexReader(FileSelectedFullPath ?? "", 3,
              blackList:
              [
                 "2e",
