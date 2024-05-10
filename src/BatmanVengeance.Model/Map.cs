@@ -2,6 +2,12 @@
 
 public class Map
 {
+
+    /// <summary>
+    ///  defines the offset to insert the pointer if needs
+    /// </summary>
+    public string? origin { get; set; }
+
     /// <summary>
     /// Start character
     /// </summary>

@@ -3,14 +3,14 @@
 public class PatchLabel
 {
     /// <summary>
-    /// defines the offset to insert the text
+    /// defines the offset to insert the new text
     /// </summary>
-    public string? originText { get; set; }
+    public string? newOrigin { get; set; }
 
     /// <summary>
-    ///  defines the offset to insert the pointer if needs
+    /// defines the offset of the old text
     /// </summary>
-    public string? originPointer { get; set; }
+    public string? oldOrigin { get; set; }
 
     /// <summary>
     /// labels to identify

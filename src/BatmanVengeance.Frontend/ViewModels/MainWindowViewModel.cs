@@ -116,19 +116,19 @@ public class MainWindowViewModel : ViewModelBase
     {
         if (string.IsNullOrEmpty(ExportSavePath) || string.IsNullOrEmpty(FileSelectedFullPath))
             return;
-
+        var saveRomPath = ExportSavePath.Substring(0, ExportSavePath.LastIndexOf("/") + 1) + FileSelected;
+        if (!File.Exists(saveRomPath))
+            File.Copy(FileSelectedFullPath, saveRomPath);
         var textPatched = Project?.ItemsControllerViewModel?.FindAll(x => x.LenTranslated > 0);
-
         if (textPatched == null || textPatched.Count == 0)
             return;
-
         var patchLabels = textPatched.Select(x => new PatchLabel
         {
             db = x.TextTranslated,
             label = Regex.Replace(Guid.NewGuid().ToString().Replace("-", "_"), @"\d", ""),
-            originText = x.AddressTranslated
+            newOrigin = x.AddressTranslated == "TO BE CALC" ? "" : x.AddressTranslated,
+            oldOrigin = x.Address
         }).ToList();
-
         new HexPatcher(new Patch
         {
             endian = "lsb",
@@ -138,10 +138,7 @@ public class MainWindowViewModel : ViewModelBase
             insert = FileSelected,
             origin = "$0000000",
             PathLabels = patchLabels
-        }, ExportSavePath).Run();
-
-        if (!File.Exists(ExportSavePath.Substring(0, ExportSavePath.LastIndexOf("/") + 1) + FileSelected))
-            File.Copy(FileSelectedFullPath, ExportSavePath.Substring(0, ExportSavePath.LastIndexOf("/") + 1) + FileSelected);
+        }, ExportSavePath, "7ECFC8", saveRomPath).Run();
     }
 
     #region Meths
