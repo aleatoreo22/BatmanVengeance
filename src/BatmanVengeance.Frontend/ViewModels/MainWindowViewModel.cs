@@ -127,17 +127,17 @@ public class MainWindowViewModel : ViewModelBase
             db = x.TextTranslated,
             label = Regex.Replace(Guid.NewGuid().ToString().Replace("-", "_"), @"\d", ""),
             newOrigin = x.AddressTranslated == "TO BE CALC" ? "" : x.AddressTranslated,
-            oldOrigin = x.Address
+            oldOrigin = x.Address,
         }).ToList();
         new HexPatcher(new Patch
         {
             endian = "lsb",
-            output = FileSelected + ".patch",
+            output = "rom.gba",
             dbPointer = "$08",
-            dwText = "2e",
+            endText = "00",
             insert = FileSelected,
             origin = "$0000000",
-            PathLabels = patchLabels
+            PathLabels = patchLabels,
         }, ExportSavePath, "7ECFC8", saveRomPath).Run();
     }
 
@@ -172,7 +172,7 @@ public class MainWindowViewModel : ViewModelBase
             ProjectSavePath = files?.Path.LocalPath ?? "";
         else
             ExportSavePath = files?.Path.LocalPath ?? "";
-            
+
     }
 
     private void ReadFile()
@@ -319,14 +319,14 @@ public class MainWindowViewModel : ViewModelBase
             AllowMultiple = false,
             FileTypeFilter =
             [
+                new("Project")
+                {
+                    Patterns = ["*.json"]
+                },
                 new("GBA File")
                 {
                     Patterns = [ "*.gba" ]
                 },
-                  new("Project")
-                {
-                    Patterns = ["*.json"]
-                }
             ],
 
         });

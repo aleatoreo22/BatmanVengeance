@@ -30,7 +30,7 @@ public class Patch
     /// <summary>
     /// character for the end of text
     /// </summary>
-    public string? dwText { get; set; }
+    public string? endText { get; set; }
 
     /// <summary>
     /// character for the calc the pointer

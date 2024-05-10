@@ -43,7 +43,7 @@ public class HexPatcher(Patch patch, string fileOutput, string nextFreePosition,
             patchFile += WritePatch($"{item?.newOrigin?.PadLeft(8, '0')}", "origin $");
             patchFile += WritePatch(item?.label, sufix: ":");
             patchFile += WritePatch(item?.db, "db \"", "\"");
-            patchFile += WritePatch(Patch?.dwText, "dw $");
+            patchFile += WritePatch(Patch?.endText, "db $");
         }
 
         foreach (var item in Patch?.PathLabels ?? [])
@@ -51,14 +51,14 @@ public class HexPatcher(Patch patch, string fileOutput, string nextFreePosition,
             patchFile += WritePatch($"{item?.newOrigin?.PadLeft(8, '0')}", "origin $");
             patchFile += WritePatch(item?.label, sufix: ":");
             patchFile += WritePatch(item?.db, "db \"", "\"");
-            patchFile += WritePatch(Patch?.dwText, "dw $");
+            patchFile += WritePatch(Patch?.endText, "db $");
         }
         var table = GetTable();
         foreach (var item in table)
         {
             Console.WriteLine(item.Value);
             if (patchFile.Contains(item.Value))
-                patchFile = patchFile.Replace(item.Value, "\"," + item.Key + ",\"");
+                patchFile = patchFile.Replace(item.Value, "\",$" + item.Key + ",\"");
         }
         File.WriteAllText(FileOutput, patchFilePrefix + patchFile);
     }
