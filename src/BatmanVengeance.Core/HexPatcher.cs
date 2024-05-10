@@ -20,12 +20,12 @@ public class HexPatcher(Patch patch, string fileOutput, string nextFreePosition,
     public void Run()
     {
         var patchFile = "";
-
-        patchFile += WritePatch(Patch.arch, "arch");
-        patchFile += WritePatch(Patch.endian, "endian ");
-        patchFile += WritePatch(Patch.output, "output \"", "\" , create");
-        patchFile += WritePatch(Patch.origin, "origin ");
-        patchFile += WritePatch(Patch.insert, "insert \"", "\"");
+        var patchFilePrefix = "";
+        patchFilePrefix += WritePatch(Patch.arch, "arch");
+        patchFilePrefix += WritePatch(Patch.endian, "endian ");
+        patchFilePrefix += WritePatch(Patch.output, "output \"", "\" , create");
+        patchFilePrefix += WritePatch(Patch.origin, "origin ");
+        patchFilePrefix += WritePatch(Patch.insert, "insert \"", "\"");
 
 
         var patchLabels = Patch.PathLabels?.FindAll(x => string.IsNullOrEmpty(x.newOrigin)).ToList();
@@ -46,14 +46,44 @@ public class HexPatcher(Patch patch, string fileOutput, string nextFreePosition,
             patchFile += WritePatch(Patch?.dwText, "dw $");
         }
 
-        foreach (var item in Patch.PathLabels ?? [])
+        foreach (var item in Patch?.PathLabels ?? [])
         {
             patchFile += WritePatch($"{item?.newOrigin?.PadLeft(8, '0')}", "origin $");
             patchFile += WritePatch(item?.label, sufix: ":");
             patchFile += WritePatch(item?.db, "db \"", "\"");
             patchFile += WritePatch(Patch?.dwText, "dw $");
         }
-        File.WriteAllText(FileOutput, patchFile);
+        var table = GetTable();
+        foreach (var item in table)
+        {
+            Console.WriteLine(item.Value);
+            if (patchFile.Contains(item.Value))
+                patchFile = patchFile.Replace(item.Value, "\"," + item.Key + ",\"");
+        }
+        File.WriteAllText(FileOutput, patchFilePrefix + patchFile);
+    }
+
+    private Dictionary<string, string> GetTable()
+    {
+        using (HttpClient client = new HttpClient())
+        {
+            try
+            {
+                HttpResponseMessage response = client.GetAsync("https://raw.githubusercontent.com/aleatoreo22/BatmanVengeance/master/tabela.tbl.txt").Result;
+                response.EnsureSuccessStatusCode();
+                string conteudo = response.Content.ReadAsStringAsync().Result;
+                return conteudo
+                    .Split("\n")
+                    .ToList()
+                    .Distinct()
+                    .ToDictionary(x => x.Substring(0, 2), x => x.Substring(3));
+            }
+            catch (HttpRequestException e)
+            {
+                Console.Write("An error occurred while loading the file: " + e.Message);
+                throw;
+            }
+        }
     }
 
     private List<PatchLabel>? CalcNextFreeMemory(List<PatchLabel>? patchLabels)
