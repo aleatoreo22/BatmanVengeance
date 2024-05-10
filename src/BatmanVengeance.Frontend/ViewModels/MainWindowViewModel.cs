@@ -169,9 +169,10 @@ public class MainWindowViewModel : ViewModelBase
             };
         var files = await provider.SaveFilePickerAsync(filePickerSaveOptions);
         if (projectOptions == ProjectOptions.save)
-            ProjectSavePath = files?.Path.AbsolutePath ?? "";
+            ProjectSavePath = files?.Path.LocalPath ?? "";
         else
-            ExportSavePath = files?.Path.AbsolutePath ?? "";
+            ExportSavePath = files?.Path.LocalPath ?? "";
+            
     }
 
     private void ReadFile()
